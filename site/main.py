@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Request, File, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from mako.template import Template
 from PIL import Image
 import io
 import os
-import time
 import uuid
 
 app = FastAPI()
@@ -17,22 +16,31 @@ async def read_root(request: Request):
     template = Template(filename='templates/index.html')
     return HTMLResponse(content=template.render())
 
-@app.post("/upload", response_class=HTMLResponse)
-async def upload_image(request: Request, file: UploadFile = File(...)):
-    os.makedirs("static", exist_ok=True)
-    image_data = await file.read()
-    image = Image.open(io.BytesIO(image_data))
-    #Превращение изображения в ч/б и вывод его на странице для примера, то есть ч/б в перспективе заменится на модель
-    processed_image = image.convert("L")
-    filename = f"processed_{uuid.uuid4().hex}.png"
-    processed_image_path = f"static/{filename}"
-    processed_image.save(processed_image_path)
-    template = Template(filename='templates/index.html')
-    html_content = template.render(
-        processed_image_url=f"/{processed_image_path}"
-    )
+@app.post("/upload")
+async def upload_image(file: UploadFile = File(...)):
+    os.makedirs("static/uploads", exist_ok=True)
+    file_ext = file.filename.split('.')[-1]
+    filename = f"processed_{uuid.uuid4().hex}.{file_ext}"
+    output_path = f"static/uploads/{filename}"
+    try:
+        image = Image.open(io.BytesIO(await file.read()))
+        processed_image = image.convert("L")
+        processed_image.save(output_path)
+        
+        return JSONResponse({
+            "status": "success",
+            "image_url": f"/static/uploads/{filename}"
+        })
+    except Exception as e:
+        return JSONResponse({
+            "status": "error", 
+            "message": str(e)
+        }, status_code=500)
 
-    return HTMLResponse(content=html_content)
+@app.get("/faq", response_class=HTMLResponse)
+async def faq_page(request: Request):
+    template = Template(filename='templates/faq.html')
+    return HTMLResponse(content=template.render())
 
 if __name__ == "__main__":
     import uvicorn
