@@ -6,13 +6,30 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import tensorflow as tf
 from tensorflow.keras.applications import DenseNet121
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.applications.densenet import preprocess_input as densenet_preprocess_input
+import tensorflow_addons as tfa
 from tensorflow.keras import layers
 from tensorflow import keras
 import matplotlib.pyplot as plt
 from sklearn.utils import resample
 import collections
 import os
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    roc_auc_score,
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score
+)
+import seaborn as sns
 
+
+
+#Обязательно делать динамический learning rate, обучать долого, с автоматическим прекращением, 
 
 IMG_WIDTH = (224, 224)  # DenseNet обычно обучалась на 224x224
 IMG_CHANNELS = 3
@@ -25,7 +42,7 @@ BATCH_SIZE = 32
 def del_big_data(df):
     df_majority = df[df['label'] == 0]
     df_minority = df[df['label'] == 1]
-    n_benign_target = min(len(df_majority), len(df_minority) * 5)
+    n_benign_target = min(len(df_majority), len(df_minority) * 50)
 
     df_majority_downsampled = resample(df_majority,
                                         replace=False,
@@ -131,6 +148,14 @@ try:
 except Exception as e:
     print(f"Ошибка загрузки датасета mednode_dataset: {e}")
 
+
+
+
+
+
+
+
+
 ##############################################################
 # Разделение на обучающую и валидационную выборки
 
@@ -153,9 +178,10 @@ def augment_image(image, label):
 
 data_augmentation = tf.keras.Sequential(
     [
-        layers.RandomFlip("horizontal", seed=RANDOM_SEED), # horizontal_flip=True
+        layers.RandomFlip("horizontal", seed=RANDOM_SEED),
+        layers.RandomFlip("vertical", seed=RANDOM_SEED),
         layers.RandomRotation(
-            factor=(20/360),
+            factor=(25/360),
             fill_mode='nearest',
             seed=RANDOM_SEED
         ),
@@ -179,6 +205,53 @@ data_augmentation = tf.keras.Sequential(
     ],
     name="data_augmentation",
 )
+
+# data_augmentation = tf.keras.Sequential(
+#     [
+#         layers.RandomFlip("horizontal", seed=RANDOM_SEED),
+#         layers.RandomFlip("vertical", seed=RANDOM_SEED),
+
+#         layers.RandomRotation(
+#             factor=0.25,
+#             fill_mode='reflect', # 'reflect' или 'nearest' часто лучше 'constant' для краев
+#             interpolation='bilinear', # Качественная интерполяция
+#             seed=RANDOM_SEED
+#         ),
+
+#         layers.RandomZoom(
+#             height_factor=(-0.1, 0.1),
+#             width_factor=(-0.1, 0.1),
+#             fill_mode='reflect',
+#             interpolation='bilinear',
+#             seed=RANDOM_SEED
+#         ),
+
+#         layers.RandomTranslation(
+#             height_factor=0.1,
+#             width_factor=0.1,
+#             fill_mode='reflect',
+#             interpolation='bilinear',
+#             seed=RANDOM_SEED
+#         ),
+
+#         layers.RandomBrightness(
+#             factor=0.2,
+#             value_range=(0.0, 1.0),
+#             seed=RANDOM_SEED
+#         ),
+
+#         layers.RandomContrast(
+#             factor=0.2,
+#             seed=RANDOM_SEED
+#         ),
+
+#         layers.GaussianNoise(
+#             stddev=0.02,
+#             seed=RANDOM_SEED
+#         )
+#     ],
+#     name="aggressive_data_augmentation",
+# )
 
 train_paths, val_paths, train_labels, val_labels = train_test_split(
     all_filepaths,
@@ -209,6 +282,13 @@ val_ds = (
     .batch(BATCH_SIZE) # Формирование батчей
     .prefetch(buffer_size=AUTOTUNE) # Предзагрузка
 )
+
+
+
+
+
+
+
 ##############################################################
 # Создание модели
 
@@ -225,16 +305,27 @@ print(f"Базовая модель {base_model.name} заморожена. Trai
 
 x = base_model.output
 x = layers.GlobalAveragePooling2D(name='global_avg_pool')(x)
-x = layers.Dropout(0.2, name='head_dropout')(x)
+x = layers.Dropout(0.6, name='head_dropout')(x)
 output_tensor = layers.Dense(1, activation='sigmoid', name='class_predictions')(x)
 
 model = keras.Model(inputs=input_tensor, outputs=output_tensor, name='densenet121_transfer')
-model.summary()
+
+# model.summary()
+# input()
+
 model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=1e-3),
-    loss='binary_crossentropy',
-    metrics=['accuracy']
+    #optimizer=keras.optimizers.Adam(learning_rate=1e-3),
+    optimizer=tfa.optimizers.AdamW(
+        learning_rate=1e-3,
+        weight_decay=1e-5
+    ),
+    loss= 'binary_crossentropy',
+    metrics=['accuracy', tf.keras.metrics.AUC(name='auc')]
 )
+
+
+
+
 
 ##############################################################
 #Работа с развесовкой классов
@@ -247,12 +338,20 @@ class_weights = class_weight.compute_class_weight(
 )
 
 class_weights_dict = {i : class_weights[i] for i, cls in enumerate(np.unique(y_train_array))}
+class_weights_dict[1] = class_weights_dict[1] * 4
 print(f"Рассчитанные веса классов: {class_weights_dict}")
+
+
+
+
+
+
+
 
 ##############################################################
 # Контрольные точки
 
-checkpoint_filepath = 'C:\\Users\\urako\\OneDrive\\Документы\\Code\\Mr.-Mole\\CNN\\checkpoints\\model_DenseNet121_not_full_teach_{epoch:02d}_{val_loss:.2f}.h5' # Путь к файлу для сохранения
+checkpoint_filepath = 'C:\\Users\\urako\\OneDrive\\Документы\\Code\\Mr.-Mole\\CNN\\checkpoints\\model_DenseNet121_not_full150_Dp_6_AdamW_VeryBigD_Flips_We6_{epoch:02d}_{val_loss:.2f}.h5' # Путь к файлу для сохранения
 model_checkpoint_callback = ModelCheckpoint(
     filepath=checkpoint_filepath,
     save_weights_only=True, # Сохранять только веса модели, а не всю модель целиком (меньше места, быстрее)
@@ -261,6 +360,13 @@ model_checkpoint_callback = ModelCheckpoint(
     save_best_only=True, # Сохранять только лучшую модель (с наилучшим значением monitor метрики)
     verbose=1 # Выводить сообщения о сохранении контрольных точек
 )
+
+
+
+
+
+
+
 
 ##############################################################
 # Обучение модели
@@ -272,7 +378,7 @@ model_checkpoint_callback = ModelCheckpoint(
 print("\n--- Начало обучения только 'головы' ---")
 history = model.fit(
     train_ds,
-    epochs=7,
+    epochs=5,
     validation_data=val_ds,
     class_weight=class_weights_dict,
     callbacks=[model_checkpoint_callback],
@@ -286,17 +392,27 @@ print("\n--- Начало этапа Fine-tuning ---")
 base_model.trainable = True # Размораживаем всю базовую модель
 print("\n--- Summary после разморозки для Fine-tuning ---")
 
-fine_tune_at = 100
-for layer in base_model.layers[:fine_tune_at]:
-   layer.trainable = False
-print(f"Заморожены слои до {fine_tune_at}-го.")
-
-model.summary() 
+unfreeze_from_layer_name = 'conv4_block21_0_bn' #149 слой
+unfreeze_idx = None
+for idx, layer in enumerate(base_model.layers):
+    if layer.name == unfreeze_from_layer_name:
+        unfreeze_idx = idx
+        break
+if unfreeze_idx is not None:
+    for i, layer in enumerate(base_model.layers):
+        layer.trainable = (i >= unfreeze_idx)
+    print(f"Заморожены все слои до {unfreeze_from_layer_name} (индекс {unfreeze_idx}).")
+else:
+    print(f"Слой с именем {unfreeze_from_layer_name} не найден!")
 
 model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=1e-5), # learning_rate должн быть сильно ниже обыкновенного!
-    loss='binary_crossentropy',
-    metrics=['accuracy']
+    #optimizer=keras.optimizers.Adam(learning_rate=1e-5),
+    optimizer=tfa.optimizers.AdamW(
+        learning_rate=1e-5,
+        weight_decay=1e-4
+    ),
+    loss= 'binary_crossentropy',
+    metrics=['accuracy', tf.keras.metrics.AUC(name='auc')]
 )
 
 
@@ -308,25 +424,34 @@ else:
      print("Предупреждение: Не найдены веса для загрузки перед fine-tuning. Продолжаем с текущими.")
 
 print("\n--- Начало обучения всей модели (Fine-tuning) ---")
-# history_fine = model.fit(train_dataset,
-#                          epochs=10, # Можно обучать дольше
-#                          initial_epoch=history.epoch[-1], # Продолжить с того места, где остановились (опционально)
-#                          validation_data=validation_dataset)
 
 initial_epoch_fine_tuning = history.epoch[-1] + 1
-epochs_fine_tuning = 20 # Сколько эпох хотим обучать на этапе fine-tuning
+epochs_fine_tuning = 50 # Сколько эпох хотим обучать на этапе fine-tuning
 total_epochs = initial_epoch_fine_tuning + epochs_fine_tuning
 
+early_stopper = EarlyStopping(monitor='val_loss',
+                            patience=10,
+                            verbose=1, # Выводить сообщение при остановке
+                            mode='min',
+                            restore_best_weights=True)
+
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=1e-7, verbose=1)
+                            
 print(f"\n--- Начало обучения всей модели (Fine-tuning) с эпохи {initial_epoch_fine_tuning} ---")
 history_fine = model.fit(
     train_ds,
     epochs=total_epochs,
     validation_data=val_ds,
     class_weight=class_weights_dict,
-    callbacks=[model_checkpoint_callback],
+    callbacks=[model_checkpoint_callback, early_stopper, reduce_lr],
     initial_epoch=initial_epoch_fine_tuning
 )
 print("--- Fine-tuning завершен ---")
+
+
+
+
+
 
 ##############################################################
 #Графики обучения
