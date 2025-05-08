@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import 'settings_page.dart';
-import '../widget/camera.dart';
+import 'camera.dart';
 import '../packages/notification.dart';
+import '../packages/camera_repo.dart';
+import 'analys.dart';
 
 class HomePage extends StatefulWidget {
   final NotificationService notificationService;
@@ -15,16 +16,33 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String? _imagePath;
-
   Future<void> _pickImage(ImageSource source) async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? photo = await picker.pickImage(source: source);
-    if (photo != null) {
-      setState(() {
-        _imagePath = photo.path;
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? photo = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 2000,
+        maxHeight: 2000,
+      );
+
+      if (photo != null) {
         widget.notificationService.setTime();
-      });
+
+        // Не нужно сохранять путь в состоянии, сразу переходим на экран анализа
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AnalysisScreen(imagePath: photo.path),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при выборе изображения: ${e.toString()}'),
+        ),
+      );
     }
   }
 
@@ -33,21 +51,10 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: appBar(context),
       body: Center(
-        child:
-            _imagePath != null
-                ? ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.file(
-                    File(_imagePath!),
-                    fit: BoxFit.cover,
-                    width: 300,
-                    height: 300,
-                  ),
-                )
-                : const Text(
-                  'Выберите фото или сделайте снимок',
-                  style: TextStyle(fontSize: 16),
-                ),
+        child: const Text(
+          'Выберите фото или сделайте снимок',
+          style: TextStyle(fontSize: 16),
+        ),
       ),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -56,7 +63,6 @@ class _HomePageState extends State<HomePage> {
             onPressed: () => _pickImage(ImageSource.gallery),
             backgroundColor: Color(0xFF1b264a),
             elevation: 4.0,
-            mini: false,
             tooltip: 'Выбрать из галереи',
             heroTag: 'galleryButton',
             child: const Icon(
@@ -67,21 +73,31 @@ class _HomePageState extends State<HomePage> {
           ),
           SizedBox(width: 128),
           FloatingActionButton(
-            onPressed:
-                () => Navigator.push(
+            onPressed: () async {
+              try {
+                final cameras = await CameraHandler.getAvailableCameras();
+                if (!mounted) return;
+                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => CustomCameraScreen()),
-                ),
+                  MaterialPageRoute(
+                    builder: (_) => CameraScreen(cameras: cameras),
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Ошибка камеры: ${e.toString()}')),
+                );
+              }
+            },
             backgroundColor: Color(0xFF1b264a),
             elevation: 4.0,
-            mini: false,
             tooltip: 'Сделайте фото',
             heroTag: 'cameraButton',
             child: const Icon(Icons.camera_alt, color: Colors.white, size: 32),
           ),
         ],
       ),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
@@ -101,26 +117,18 @@ AppBar appBar(BuildContext context) {
     centerTitle: true,
     elevation: 0.0,
     actions: [
-      GestureDetector(
-        onTap: () {
+      IconButton(
+        icon: SvgPicture.asset(
+          'assets/icons/settings.svg',
+          height: 30,
+          width: 30,
+        ),
+        onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const SettingsPage()),
           );
         },
-        child: Container(
-          margin: EdgeInsets.all(5),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Color(0xFF1b264a),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: SvgPicture.asset(
-            'assets/icons/settings.svg',
-            height: 30,
-            width: 30,
-          ),
-        ),
       ),
     ],
   );
