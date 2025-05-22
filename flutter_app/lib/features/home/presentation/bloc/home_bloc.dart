@@ -13,7 +13,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc(this.camerasFuture) : super(HomeInitial()) {
     on<OpenGalleryEvent>(_onOpenGallery);
     on<OpenCameraEvent>(_onOpenCamera);
-    on<ResetHomeEvent>(_onReset);
+    on<OpenSettingsEvent>(_onOpenSettings);
   }
 
   Future<void> _onOpenGallery(
@@ -53,7 +53,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
     } catch (e) {
       print('Gallery error: $e');
-      emit(HomeError('Ошибка галереи: ${e.toString()}'));
+      emit(HomeError('Ошибка галереи: ${e.toString()}', source: 'gallery'));
     }
   }
 
@@ -66,19 +66,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final cameras = await camerasFuture;
 
       if (cameras.isEmpty) {
-        emit(HomeError('Камера недоступна'));
+        emit(HomeError('Камера недоступна', source: 'camera'));
       } else {
         emit(CameraReady(cameras));
       }
     } catch (e) {
-      emit(HomeError('Ошибка камеры: ${e.toString()}'));
+      emit(HomeError('Ошибка камеры: ${e.toString()}', source: 'camera'));
     }
   }
 
-  void _onReset(
-    ResetHomeEvent event,
+  Future<void> _onOpenSettings(
+    OpenSettingsEvent event,
     Emitter<HomeState> emit,
-  ) {
-    emit(HomeInitial());
+  ) async {
+    emit(NavigateToSettings());
   }
 }

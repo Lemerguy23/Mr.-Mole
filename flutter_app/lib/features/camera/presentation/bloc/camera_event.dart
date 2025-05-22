@@ -9,7 +9,14 @@ abstract class CameraEvent extends Equatable {
 
 class CameraInitializeEvent extends CameraEvent {}
 
-class CaptureImageEvent extends CameraEvent {}
+class CaptureImageEvent extends CameraEvent {
+  final Size screenSize;
+
+  const CaptureImageEvent(this.screenSize);
+
+  @override
+  List<Object> get props => [screenSize];
+}
 
 class SwitchCameraEvent extends CameraEvent {}
 
@@ -26,23 +33,6 @@ class ZoomChangedEvent extends CameraEvent {
   List<Object> get props => [zoomLevel];
 }
 
-class ZoomGestureEvent extends CameraEvent {
-  final double gestureScale;
-
-  const ZoomGestureEvent(this.gestureScale);
-
-  @override
-  List<Object> get props => [gestureScale];
-}
-
-class ConfirmMolePositionEvent extends CameraEvent {
-  final double x; // координаты центра квадрата
-  final double y;
-
-  const ConfirmMolePositionEvent({required this.x, required this.y});
-
-  @override
-  List<Object> get props => [x, y];
-}
-
 class ToggleFlashEvent extends CameraEvent {}
+
+class ToggleInstructionEvent extends CameraEvent {}

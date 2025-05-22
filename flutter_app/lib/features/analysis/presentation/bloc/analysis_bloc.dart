@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:mr_mole/core/utils/notification.dart';
 import 'package:mr_mole/core/utils/model_cache.dart';
+import 'package:mr_mole/features/home/data/repositories/scan_history_repository.dart';
 
 part 'analysis_event.dart';
 part 'analysis_state.dart';
@@ -14,12 +15,14 @@ part 'analysis_state.dart';
 class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
   final String imagePath;
   final NotificationService notificationService;
+  final ScanHistoryRepository historyRepository;
   Interpreter? _interpreter;
   bool _isDisposed = false;
 
   AnalysisBloc({
     required this.imagePath,
     required this.notificationService,
+    required this.historyRepository,
   }) : super(AnalysisInitial()) {
     on<AnalyzeImageEvent>(_onAnalyzeImage);
     on<SaveResultEvent>(_onSaveResult);
@@ -69,12 +72,6 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
 
       print('Изображение успешно загружено и декодировано');
 
-      final resizedImage = img.copyResize(
-        image,
-        width: 224,
-        height: 224,
-      );
-
       final inputShape = _interpreter!.getInputTensor(0).shape;
       final outputShape = _interpreter!.getOutputTensor(0).shape;
 
@@ -86,9 +83,9 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
       final outputBuffer = Float32List(outputShape[1]);
 
       var index = 0;
-      for (var y = 0; y < resizedImage.height; y++) {
-        for (var x = 0; x < resizedImage.width; x++) {
-          final pixel = resizedImage.getPixel(x, y);
+      for (var y = 0; y < image.height; y++) {
+        for (var x = 0; x < image.width; x++) {
+          final pixel = image.getPixel(x, y);
           final r = pixel.r;
           final g = pixel.g;
           final b = pixel.b;
@@ -135,12 +132,20 @@ class AnalysisBloc extends Bloc<AnalysisEvent, AnalysisState> {
     try {
       if (state is AnalysisSuccess) {
         final result = (state as AnalysisSuccess).result;
+
+        // Показываем уведомление
         await notificationService.showNotification(
           title: 'Результат анализа',
           body: result,
         );
+
+        // Сохраняем в историю
+        await historyRepository.addToHistory(imagePath, result);
+
+        print('Результат анализа сохранен в историю');
       }
     } catch (e) {
+      print('Ошибка при сохранении результата: $e');
       if (!_isDisposed) {
         emit(
             AnalysisError('Ошибка при сохранении результата: ${e.toString()}'));

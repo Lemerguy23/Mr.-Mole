@@ -18,5 +18,9 @@ class CameraReady extends HomeState {
 
 class HomeError extends HomeState {
   final String message;
-  HomeError(this.message);
+  final String source;
+
+  HomeError(this.message, {this.source = 'general'});
 }
+
+class NavigateToSettings extends HomeState {}
