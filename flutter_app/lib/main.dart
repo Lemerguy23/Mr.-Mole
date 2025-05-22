@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:mr_mole/core/utils/camera_repo.dart';
 import 'package:mr_mole/features/home/presentation/pages/home_page.dart';
 import 'package:mr_mole/core/utils/notification.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -17,6 +19,8 @@ void main() async {
   final camerasFuture = CameraHandler.getAvailableCameras();
   final notificationsPlugin = FlutterLocalNotificationsPlugin();
   final notificationService = NotificationService(notificationsPlugin);
+
+  FlutterNativeSplash.remove();
 
   runApp(
     MyApp(
@@ -72,9 +76,14 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          return HomePage(
-            camerasFuture: camerasFuture,
-            notificationService: notificationService,
+          return WillPopScope(
+            onWillPop: () async {
+              return true;
+            },
+            child: HomePage(
+              camerasFuture: camerasFuture,
+              notificationService: notificationService,
+            ),
           );
         },
       ),

@@ -6,4 +6,4 @@ class OpenGalleryEvent extends HomeEvent {}
 
 class OpenCameraEvent extends HomeEvent {}
 
-class ResetHomeEvent extends HomeEvent {}
+class OpenSettingsEvent extends HomeEvent {}

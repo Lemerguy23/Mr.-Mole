@@ -3,9 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:mr_mole/features/home/presentation/bloc/home_bloc.dart';
 import 'package:mr_mole/features/camera/presentation/pages/camera_page.dart';
-import 'package:mr_mole/features/home/presentation/pages/settings_page.dart';
+import 'package:mr_mole/features/settings/presentation/pages/settings_page.dart';
 import 'package:mr_mole/features/analysis/presentation/pages/analys.dart';
 import 'package:mr_mole/core/utils/notification.dart';
+import 'package:mr_mole/features/image_processing/presentation/pages/mole_confirmation_screen.dart';
+import 'package:mr_mole/features/home/presentation/widgets/main_tab.dart';
+import 'package:mr_mole/features/home/presentation/widgets/history_tab.dart';
+import 'package:mr_mole/features/home/presentation/widgets/faq_tab.dart';
+import 'package:mr_mole/features/home/data/repositories/scan_history_repository.dart';
 
 class HomePage extends StatefulWidget {
   final Future<List<CameraDescription>> camerasFuture;
@@ -21,23 +26,113 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   late HomeBloc _homeBloc;
+  late PageController _pageController;
+  int _currentIndex = 1;
 
   @override
   void initState() {
     super.initState();
     _homeBloc = HomeBloc(widget.camerasFuture);
+    _pageController = PageController(initialPage: 1);
+  }
+
+  void _resetToMainTab() {
+    if (mounted) {
+      setState(() {
+        _currentIndex = 1;
+        _pageController.animateToPage(
+          1,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
+  }
+
+  void _navigateToAnalysis(String imagePath) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AnalysisScreen(
+          imagePath: imagePath,
+          notificationService: widget.notificationService,
+          onRetake: () {
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
+    ).then((_) {
+      _resetToMainTab();
+    });
+  }
+
+  Future<void> _navigateToCamera(List<CameraDescription> cameras) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraPage(
+          cameras: cameras,
+          notificationService: widget.notificationService,
+        ),
+      ),
+    ).then((_) {
+      _resetToMainTab();
+    });
+  }
+
+  Future<void> _navigateToSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SettingsPage(),
+      ),
+    );
+  }
+
+  void _navigateToConfirmation(String imagePath) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MoleConfirmationScreen(
+          imagePath: imagePath,
+          notificationService: widget.notificationService,
+          onConfirm: (String croppedPath) {
+            _navigateToAnalysis(croppedPath);
+          },
+          onCancel: () {
+            Navigator.of(context).pop();
+            _resetToMainTab();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   @override
   void dispose() {
     _homeBloc.close();
+    _pageController.dispose();
     super.dispose();
-  }
-
-  void _handleCameraReturn() {
-    _homeBloc.add(ResetHomeEvent());
   }
 
   @override
@@ -47,21 +142,11 @@ class _HomePageState extends State<HomePage> {
       child: BlocListener<HomeBloc, HomeState>(
         listener: (context, state) {
           if (state is GalleryImageSelected) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AnalysisScreen(
-                  imagePath: state.imagePath,
-                  notificationService: widget.notificationService,
-                  onRetake: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                    _homeBloc.add(ResetHomeEvent());
-                  },
-                ),
-              ),
-            ).then((_) {
-              _homeBloc.add(ResetHomeEvent());
-            });
+            _navigateToConfirmation(state.imagePath);
+          } else if (state is CameraReady) {
+            _navigateToCamera(state.cameras);
+          } else if (state is NavigateToSettings) {
+            _navigateToSettings();
           }
         },
         child: Scaffold(
@@ -70,14 +155,7 @@ class _HomePageState extends State<HomePage> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsPage(),
-                    ),
-                  );
-                },
+                onPressed: () => _homeBloc.add(OpenSettingsEvent()),
               ),
             ],
           ),
@@ -107,67 +185,43 @@ class _HomePageState extends State<HomePage> {
                           color: Colors.red,
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          _homeBloc.add(OpenCameraEvent());
-                        },
-                        child: const Text('Попробовать снова'),
-                      ),
                     ],
                   ),
                 );
               }
 
-              if (state is CameraReady) {
-                return WillPopScope(
-                  onWillPop: () async {
-                    _handleCameraReturn();
-                    return true;
-                  },
-                  child: CameraPage(
-                    cameras: state.cameras,
-                    notificationService: widget.notificationService,
+              return PageView(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                children: [
+                  const HistoryTab(),
+                  MainTab(
+                    homeBloc: _homeBloc,
                   ),
-                );
-              }
-
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Добро пожаловать в Mr. Mole',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            _homeBloc.add(OpenGalleryEvent());
-                          },
-                          icon: const Icon(Icons.photo_library),
-                          label: const Text('Галерея'),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            _homeBloc.add(OpenCameraEvent());
-                          },
-                          icon: const Icon(Icons.camera_alt),
-                          label: const Text('Камера'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  const FAQTab(),
+                ],
               );
             },
+          ),
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: _onItemTapped,
+            selectedItemColor: Theme.of(context).colorScheme.primary,
+            unselectedItemColor: Colors.grey,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.history),
+                label: 'История',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Главная',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.question_answer),
+                label: 'FAQ',
+              ),
+            ],
           ),
         ),
       ),
