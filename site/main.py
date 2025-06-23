@@ -37,11 +37,6 @@ def predict_mole_tflite(image: Image.Image) -> float:
 
 
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = TemplateLookup(directories=[TEMPLATES_DIR])
 
@@ -96,4 +91,4 @@ async def faq_page(request: Request):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=2468)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
