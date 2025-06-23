@@ -15,9 +15,11 @@ body {
     flex-direction: column;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
-    color: #eadfdd;
-    background: #14162d;
-    background-image: linear-gradient(135deg, #14162d 0%, #3c4d61 100%);
+    color: white;
+    /* Новый подход к фону */
+    background: #14162d; /* Fallback цвет */
+    background-image: 
+        linear-gradient(135deg, #14162d 0%, #3c4d61 100%);
     background-attachment: fixed;
     background-repeat: no-repeat;
     background-size: cover;
@@ -35,9 +37,9 @@ body::before {
     z-index: -1;
 }
 
-/* ===== HEADER ===== */
+/* Остальные стили остаются без изменений, начиная с .header */
 .header {
-    background-color: #273457;
+    background-color: rgba(26, 26, 46, 0.9);
     padding: 1rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -56,14 +58,14 @@ body::before {
 }
 
 .logo-img {
-    height: 40px;
+    height: 40px; /* Регулируйте по необходимости */
     width: auto;
 }
 
 .logo-text {
     font-size: 1.8rem;
     font-weight: bold;
-    color: #eadfdd;
+    color: #e9ebee;
 }
 
 .nav-links {
@@ -72,7 +74,7 @@ body::before {
 }
 
 .nav-links a {
-    color: #eadfdd;
+    color: white;
     text-decoration: none;
     font-weight: 500;
     font-size: 1.1rem;
@@ -90,7 +92,7 @@ body::before {
     border-bottom: 2px solid #4cc9f0;
 }
 
-/* ===== MAIN CONTENT ===== */
+/* ===== MAIN CONTENT LAYOUT ===== */
 .main-content {
     flex: 1;
     padding: 2rem;
@@ -100,14 +102,14 @@ body::before {
 }
 
 h1 {
-    color: #eadfdd;
+    color: #ffffff;
     margin-bottom: 2rem;
     text-align: center;
 }
 
-/* ===== UPLOAD FORM ===== */
+/* ===== UPLOAD FORM STYLES ===== */
 .upload-section {
-    background: #273457;
+    background: rgba(255, 255, 255, 0.1);
     padding: 2rem;
     border-radius: 10px;
     margin-bottom: 2rem;
@@ -163,9 +165,9 @@ h1 {
     font-size: 0.9rem;
 }
 
-/* ===== RESULT SECTION ===== */
+/* ===== RESULT SECTION STYLES ===== */
 .result-section {
-    background: #273457;
+    background: rgba(255, 255, 255, 0.1);
     padding: 2rem;
     border-radius: 10px;
     margin-top: 2rem;
@@ -177,12 +179,10 @@ h1 {
     font-size: 2rem;
     font-weight: bold;
     margin: 1rem 0;
-    color: #eadfdd;
 }
 
 .result-description {
     font-size: 1.1rem;
-    color: #eadfdd;
 }
 
 .error-message {
@@ -194,7 +194,7 @@ h1 {
     text-align: center;
 }
 
-/* ===== IMAGE PREVIEW ===== */
+/* ===== IMAGE PREVIEW & CROPPING STYLES ===== */
 .preview-wrapper {
     position: relative;
     display: inline-block;
@@ -215,7 +215,6 @@ h1 {
     max-height: 60vh;
     margin: 0 auto;
     border-radius: 4px;
-    background: #273457;
 }
 
 .darkening-overlay {
@@ -259,14 +258,14 @@ h1 {
     background-color: #f1382b;
 }
 
-/* ===== FAQ SECTION ===== */
+/* ===== FAQ STYLES ===== */
 .faq-container {
     max-width: 800px;
     margin: 0 auto;
 }
 
 .faq-item {
-    background: #273457;
+    background: rgba(255, 255, 255, 0.1);
     padding: 1.5rem;
     border-radius: 10px;
     margin-bottom: 1.5rem;
@@ -297,14 +296,13 @@ h1 {
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease;
-    color: #eadfdd;
 }
 
 .faq-item.active .faq-answer {
     max-height: 500px;
 }
 
-/* ===== LANDING PAGE ===== */
+/* ===== LANDING PAGE STYLES ===== */
 .main-page-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -314,21 +312,21 @@ h1 {
 .hero-section {
     text-align: center;
     padding: 60px 20px;
-    background: #273457;
+    background: linear-gradient(135deg, rgba(245, 247, 250, 0.1) 0%, rgba(228, 232, 235, 0.1) 100%);
     border-radius: 10px;
     margin-bottom: 40px;
     backdrop-filter: blur(5px);
 }
 
 .hero-section h1 {
-    color: #eadfdd;
     font-size: 2.5rem;
+    color: #ffffff;
     margin-bottom: 15px;
 }
 
 .subtitle {
     font-size: 1.2rem;
-    color: #eadfdd;
+    color: rgba(255, 255, 255, 0.8);
     margin-bottom: 30px;
 }
 
@@ -358,7 +356,7 @@ h1 {
 
 .secondary {
     background-color: rgba(236, 240, 241, 0.2);
-    color: #eadfdd;
+    color: white;
     border: 1px solid rgba(189, 195, 199, 0.3);
 }
 
@@ -374,7 +372,7 @@ h1 {
 }
 
 .info-card {
-    background: #273457;
+    background: rgba(255, 255, 255, 0.1);
     padding: 25px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -387,14 +385,14 @@ h1 {
 }
 
 .info-card p {
-    color: #eadfdd;
+    color: rgba(255, 255, 255, 0.8);
     line-height: 1.6;
 }
 
-/* ===== FOOTER ===== */
+/* ===== FOOTER STYLES ===== */
 .footer {
-    background-color: #273457;
-    color: #eadfdd;
+    background-color: rgba(26, 26, 46, 0.9);
+    color: white;
     padding: 20px 0;
     text-align: left;
     width: 100%;
@@ -416,7 +414,6 @@ h1 {
     .logo-img {
         height: 30px;
     }
-
     .logo-text {
         font-size: 1.5rem;
     }
@@ -459,3 +456,4 @@ h1 {
         text-align: center;
     }
 }
+

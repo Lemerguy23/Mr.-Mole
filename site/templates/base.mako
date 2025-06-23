@@ -17,7 +17,10 @@
             <a href="/" id="home-link" class="nav-link">Главная</a>
             <a href="/analyze" id="analyze-link" class="nav-link">Анализ</a>
             <a href="/faq" id="faq-link" class="nav-link">FAQ</a>
-            <a href="#" id="app-link" class="nav-link cta-button">Приложение (скоро)</a>
+            <a href="static/app/app-arm64-v8a-release.apk" 
+               id="app-link" 
+               class="nav-link cta-button"
+               download="Mr. Mole.apk">Скачать приложение</a>
         </nav>
     </header>
     <main class="main-content">

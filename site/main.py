@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 import uvicorn
 from fastapi import FastAPI, Request, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from mako.template import Template

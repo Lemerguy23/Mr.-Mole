@@ -12,14 +12,16 @@
             
             <div class="cta-buttons">
                 <a href="/analyze" class="cta-button primary">Начать анализ</a>
-                <a href="#" class="cta-button secondary">Мобильное приложение (скоро)</a>
+                <a href="static/app/app-arm64-v8a-release.apk" 
+                   class="cta-button secondary"
+                   download="Mr. Mole.apk">Мобильное приложение (скачать)</a>
             </div>
         </section>
 
         <section class="info-section">
             <div class="info-card">
                 <h2>Как это работает?</h2>
-                <p>Наша нейросеть анализирует фотографии кожных образований и оценивает вероятность злокачественности с точностью 92%.</p>
+                <p>Наша нейросеть анализирует фотографии кожных образований и оценивает вероятность злокачественности с точностью 93%.</p>
             </div>
 
             <div class="info-card">
